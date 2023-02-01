@@ -213,6 +213,16 @@ static void SetSysClock(void)
 #ifdef SYSCLK_FREQ_HSE
 static void SetSysClockToHSE(void)
 {
+    volatile uint32_t sramsize = 0;
+    
+    *(volatile uint32_t *)(0x400210F0) = BIT(0);//开启sys_cfg门控
+	  *(volatile uint32_t *)(0x40016C00) = 0xa7d93a86;//解一、二、三级锁
+	  *(volatile uint32_t *)(0x40016C00) = 0xab12dfcd;
+	  *(volatile uint32_t *)(0x40016C00) = 0xcded3526;
+	  sramsize = *(volatile uint32_t *)(0x40016C18);
+	  *(volatile uint32_t *)(0x40016C18) = 0x200183FF;//配置sram大小, 将BOOT使用对sram打开
+	  *(volatile uint32_t *)(0x4002228C) = 0xa5a5a5a5;//QSPI解锁
+    
     __IO uint32_t StartUpCounter = 0;
     uint32_t PLL_M = SYSCLK_HSE/HSE_VALUE;                                     /* Calculate multiplier  */
 
@@ -267,6 +277,13 @@ static void SetSysClockToHSE(void)
         {
         }
     }
+  //恢复配置前状态
+	*(volatile uint32_t *)(0x40016C18) = sramsize;
+	*(volatile uint32_t *)(0x400210F0) = 0;//开启sys_cfg门控
+	*(volatile uint32_t *)(0x40016C00) = ~0xa7d93a86;//加一、二、三级锁
+	*(volatile uint32_t *)(0x40016C00) = ~0xab12dfcd;
+	*(volatile uint32_t *)(0x40016C00) = ~0xcded3526;
+	*(volatile uint32_t *)(0x4002228C) = ~0xa5a5a5a5;//QSPI解锁
 }
 #endif
 /**
